@@ -1,0 +1,16 @@
+# R
+.Rhistory
+.RData
+.Rproj.user/
+.Ruserdata
+*.Rproj
+
+# Build / packaging output
+dist/
+build/
+*.exe
+R-portable/
+
+# OS
+Thumbs.db
+.DS_Store
