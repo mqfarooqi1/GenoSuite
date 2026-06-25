@@ -8,22 +8,23 @@ for genomic-era datasets. It runs as a self-contained Windows application: the
 user installs a single `Setup.exe` and launches a graphical interface — no R
 installation or coding required.
 
-## Current modules (Phase 1)
+## Modules
 
 | Module | What it does |
 |---|---|
-| **Data** | Import CSV/marker tables or load a demo SNP dataset; pick ID and grouping columns. |
+| **Data** | Import CSV/marker tables or load a demo SNP dataset; pick ID, grouping and phenotype columns. |
 | **Distance** | Genetic distance / similarity matrices: Euclidean, Manhattan, 1 − correlation, Jaccard (presence/absence), Gower. Heatmap + CSV export. |
 | **Clustering** | Dendrograms by UPGMA, Ward, complete, single linkage, and neighbour-joining (NJ). Newick export. |
-| **Ordination** | Interactive PCA (markers) and PCoA (distance) with scree plots, coloured by group. |
+| **Ordination** | PCA (markers) and PCoA (distance) with scree plots, coloured by group. |
 | **Mantel test** | Matrix-correlation test between two distance metrics, with permutation significance. |
+| **Diversity** | Per-marker MAF, expected/observed heterozygosity, PIC, and population differentiation (Nei's Fst). |
+| **GWAS** | Single-marker association with PC structure correction; Manhattan + QQ plots and a hit table. |
+| **Prediction** | Cross-validated genomic prediction (GBLUP + elastic net, random forest, gradient boosting, stacked ensemble) and GBLUP breeding values, via [GSbench](https://github.com/mqfarooqi1/GSbench). |
 
-## Planned (Phase 2+)
+## Planned
 
-Population structure & diversity (kinship/GRM, Fst, AMOVA, He/Ho, PIC), GWAS
-(Manhattan/QQ), genomic selection & prediction (via
-[GSbench](https://github.com/mqfarooqi1/GSbench)), linkage disequilibrium, and
-exportable PDF/HTML reports.
+Linkage disequilibrium, AMOVA, kinship visualisation, and exportable PDF/HTML
+reports.
 
 ## Architecture
 
@@ -39,7 +40,8 @@ exportable PDF/HTML reports.
 shiny::runApp("app")
 ```
 
-Requires: `shiny`, `bslib`, `DT`, `ggplot2`, `ape`, `vegan`.
+Requires: `shiny`, `bslib`, `DT`, `ggplot2`, `ape`, `vegan`, `GSbench`
+(plus `glmnet`, `ranger`, `xgboost` for the machine-learning predictors).
 
 ---
 

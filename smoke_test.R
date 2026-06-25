@@ -1,22 +1,38 @@
-suppressMessages({library(shiny); library(bslib); library(DT); library(ggplot2)})
+suppressMessages({
+  library(shiny); library(bslib); library(DT); library(ggplot2); library(GSbench)
+})
 cat("packages: DT", requireNamespace("DT", quietly = TRUE),
     "ape", requireNamespace("ape", quietly = TRUE),
-    "vegan", requireNamespace("vegan", quietly = TRUE), "\n")
+    "vegan", requireNamespace("vegan", quietly = TRUE),
+    "glmnet", requireNamespace("glmnet", quietly = TRUE),
+    "ranger", requireNamespace("ranger", quietly = TRUE),
+    "xgboost", requireNamespace("xgboost", quietly = TRUE), "\n")
 
 invisible(parse("app/app.R")); cat("PARSE OK\n")
 source("app/app.R", local = TRUE); cat("SOURCE OK; ui class:", class(ui)[1], "\n")
 
-df <- simulate_demo(); cat("demo dims:", dim(df), "\n")
-X <- numeric_matrix(df, "ID", "Population"); cat("marker matrix:", dim(X), "\n")
-for (mt in c("euclidean", "manhattan", "correlation", "jaccard", "gower")) {
-  d <- compute_distance(X, mt); cat(sprintf("  dist %-12s size=%d ok\n", mt, length(d)))
+df <- simulate_demo(); cat("demo dims:", dim(df), " cols:", paste(head(names(df), 4), collapse = ","), "...\n")
+X  <- numeric_matrix(df, "ID", "Population", "Trait"); cat("marker matrix:", dim(X), "\n")
+y  <- df$Trait
+
+# core (phase 1)
+for (mt in names(DIST_CHOICES)) {
+  d <- compute_distance(X, DIST_CHOICES[[mt]]); stopifnot(length(d) == choose(nrow(X), 2))
 }
-d  <- compute_distance(X, "euclidean")
-hc <- hclust(d, "average");      cat("hclust OK\n")
-nj <- ape::nj(d);                cat("nj tips:", length(nj$tip.label), "\n")
-cm <- cmdscale(d, k = 2, eig = TRUE); cat("PCoA dims:", dim(cm$points), "\n")
-pr <- prcomp(X);                 cat("PCA PCs:", ncol(pr$x), "\n")
-mr <- vegan::mantel(compute_distance(X, "euclidean"),
-                    compute_distance(X, "manhattan"), permutations = 99)
-cat("mantel r:", round(mr$statistic, 3), " p:", mr$signif, "\n")
+cat("distances OK; nj tips:", length(ape::nj(compute_distance(X, "euclidean"))$tip.label), "\n")
+
+# diversity
+dv <- diversity_stats(X); cat("diversity rows:", nrow(dv), " mean He:", round(mean(dv$He), 3), "\n")
+fs <- fst_nei(X, df$Population); cat("Fst rows:", nrow(fs), " overall Fst:", round(mean(fs$Fst, na.rm = TRUE), 3), "\n")
+
+# gwas
+gw <- gwas_scan(y, X, n_pc = 2)
+cat("gwas rows:", nrow(gw), " top -log10p:", round(max(gw$logp, na.rm = TRUE), 2), "\n")
+
+# prediction (all models)
+cv <- gs_cv(y, X, models = available_models(), k = 5, seed = 1)
+cat("CV models:\n"); print(round_df(as.data.frame(summary(cv))))
+gb <- gblup(y, geno = X)
+cat("GBLUP h2:", round(gb$h2, 3), " gebv length:", length(gb$gebv), "\n")
+
 cat("ALL SMOKE TESTS PASSED\n")

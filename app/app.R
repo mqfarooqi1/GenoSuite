@@ -1,59 +1,72 @@
 # GenoSuite — modern numerical-genomics analytics
 # ---------------------------------------------------------------------------
 # A desktop analytics suite in the spirit of NTSYSpc, rebuilt for genomic-era
-# marker data. Phase-1 modules:
-#   1. Data import & preview
+# marker data.
+#
+# Modules:
+#   1. Data import & preview (markers + optional phenotype)
 #   2. Genetic distance / similarity matrices
 #   3. Clustering & dendrograms (UPGMA / Ward / neighbour-joining)
 #   4. Ordination (PCA / PCoA)
 #   5. Mantel matrix-correlation test
+#   6. Diversity & population differentiation (MAF, He, Ho, PIC, Fst)
+#   7. GWAS (single-marker association, Manhattan + QQ)
+#   8. Genomic prediction (GBLUP + machine learning, via GSbench)
 # ---------------------------------------------------------------------------
 
 library(shiny)
 library(bslib)
 library(DT)
 library(ggplot2)
+library(GSbench)
 
-# ---- helpers --------------------------------------------------------------
+# ---- data helpers ---------------------------------------------------------
 
-## Simulate a small, structured SNP dataset so the app is usable on first run.
-simulate_demo <- function(n_per_pop = 12, n_markers = 60, n_pop = 3, seed = 1) {
+## Structured demo SNP dataset with a heritable quantitative trait.
+simulate_demo <- function(n_per_pop = 12, n_markers = 60, n_pop = 3,
+                          n_qtl = 8, h2 = 0.5, seed = 1) {
   set.seed(seed)
   pops <- paste0("Pop", seq_len(n_pop))
   blocks <- vector("list", n_pop)
   for (k in seq_len(n_pop)) {
     p <- runif(n_markers, 0.1, 0.9)
     shift <- rep(0, n_markers)
-    idx <- sample(n_markers, n_markers %/% 3)
-    shift[idx] <- (k - (n_pop + 1) / 2) * 0.18          # structure across pops
+    shift[sample(n_markers, n_markers %/% 3)] <- (k - (n_pop + 1) / 2) * 0.18
     p <- pmin(pmax(p + shift, 0.02), 0.98)
     blocks[[k]] <- sapply(p, function(pp) rbinom(n_per_pop, 2, pp))
   }
   X <- do.call(rbind, blocks)
   colnames(X) <- sprintf("SNP%03d", seq_len(n_markers))
+  # heritable trait from a handful of causal markers
+  causal <- sort(sample(n_markers, n_qtl))
+  gv <- as.numeric(scale(X[, causal, drop = FALSE]) %*% rnorm(n_qtl))
+  ve <- stats::var(gv) * (1 - h2) / h2
+  trait <- round(gv + rnorm(nrow(X), sd = sqrt(ve)), 3)
   data.frame(
     ID = sprintf("Ind%03d", seq_len(nrow(X))),
     Population = rep(pops, each = n_per_pop),
+    Trait = trait,
     X, check.names = FALSE, stringsAsFactors = FALSE
   )
 }
 
-## Pull the numeric marker matrix out of a data frame, dropping ID/group cols.
-numeric_matrix <- function(df, id_col, group_col) {
-  drop <- c(id_col, group_col)
+## Numeric marker matrix, dropping ID / group / phenotype columns.
+numeric_matrix <- function(df, id_col, group_col, pheno_col = "") {
+  drop <- c(id_col, group_col, pheno_col)
   drop <- drop[nzchar(drop)]
   M <- df[, setdiff(names(df), drop), drop = FALSE]
   M <- M[, vapply(M, is.numeric, logical(1)), drop = FALSE]
   as.matrix(M)
 }
 
-## Distance metrics (classic + marker-appropriate).
+# ---- analysis helpers -----------------------------------------------------
+
 DIST_CHOICES <- c(
-  "Euclidean"               = "euclidean",
-  "Manhattan (city-block)"  = "manhattan",
-  "1 - Pearson correlation" = "correlation",
+  "Euclidean"                  = "euclidean",
+  "Manhattan (city-block)"     = "manhattan",
+  "1 - Pearson correlation"    = "correlation",
   "Jaccard (presence/absence)" = "jaccard",
-  "Gower"                   = "gower"
+  "Gower"                      = "gower"
 )
 
 compute_distance <- function(X, metric) {
@@ -68,12 +81,56 @@ compute_distance <- function(X, metric) {
 }
 
 CLUST_CHOICES <- c(
-  "UPGMA (average)" = "average",
-  "Ward's (ward.D2)" = "ward.D2",
-  "Complete linkage" = "complete",
-  "Single linkage"   = "single",
+  "UPGMA (average)"        = "average",
+  "Ward's (ward.D2)"       = "ward.D2",
+  "Complete linkage"       = "complete",
+  "Single linkage"         = "single",
   "Neighbour-joining (NJ)" = "nj"
 )
+
+## Per-marker diversity statistics (assumes 0/1/2 allele dosage).
+diversity_stats <- function(X) {
+  p   <- colMeans(X, na.rm = TRUE) / 2
+  q   <- 1 - p
+  He  <- 2 * p * q
+  Ho  <- colMeans(X == 1, na.rm = TRUE)
+  PIC <- 1 - (p^2 + q^2) - 2 * p^2 * q^2
+  data.frame(marker = colnames(X), Freq = p, MAF = pmin(p, q),
+             He = He, Ho = Ho, PIC = PIC, row.names = NULL)
+}
+
+## Nei's Gst (Fst) per marker between groups.
+fst_nei <- function(X, groups) {
+  g <- factor(groups)
+  freqs <- vapply(levels(g),
+                  function(lev) colMeans(X[g == lev, , drop = FALSE], na.rm = TRUE) / 2,
+                  numeric(ncol(X)))                      # markers x subpops
+  Hs   <- rowMeans(2 * freqs * (1 - freqs))
+  pbar <- rowMeans(freqs)
+  Ht   <- 2 * pbar * (1 - pbar)
+  Fst  <- ifelse(Ht > 0, (Ht - Hs) / Ht, NA_real_)
+  data.frame(marker = colnames(X), Hs = Hs, Ht = Ht, Fst = Fst, row.names = NULL)
+}
+
+## Single-marker GWAS scan with optional PC correction for structure.
+gwas_scan <- function(y, X, n_pc = 0) {
+  keep <- !is.na(y)
+  y <- y[keep]; X <- X[keep, , drop = FALSE]
+  covar <- NULL
+  if (n_pc > 0) covar <- prcomp(X, scale. = FALSE)$x[, seq_len(n_pc), drop = FALSE]
+  out <- lapply(seq_len(ncol(X)), function(j) {
+    dat <- data.frame(y = y, snp = X[, j])
+    if (!is.null(covar)) dat <- cbind(dat, covar)
+    fit <- tryCatch(lm(y ~ ., data = dat), error = function(e) NULL)
+    if (is.null(fit)) return(c(NA, NA))
+    co <- summary(fit)$coefficients
+    if ("snp" %in% rownames(co)) co["snp", c("Estimate", "Pr(>|t|)")] else c(NA, NA)
+  })
+  out <- do.call(rbind, out)
+  data.frame(marker = colnames(X), index = seq_len(ncol(X)),
+             effect = out[, 1], p = out[, 2], logp = -log10(out[, 2]),
+             row.names = NULL)
+}
 
 # ---- UI -------------------------------------------------------------------
 
@@ -83,103 +140,152 @@ ui <- page_navbar(
   theme = bs_theme(version = 5, primary = "#1f7a3d"),
   fillable = TRUE,
 
-  # ---- Data ----
   nav_panel(
     "Data",
     layout_sidebar(
       sidebar = sidebar(
-        width = 320,
+        width = 330,
         fileInput("file", "Upload data (CSV)", accept = c(".csv", ".txt")),
         checkboxInput("header", "First row is header", TRUE),
         actionButton("demo", "Load demo SNP dataset", class = "btn-primary w-100"),
         hr(),
         selectInput("id_col", "ID column", choices = NULL),
         selectInput("group_col", "Grouping column (optional)", choices = NULL),
-        helpText("Rows = individuals/OTUs. Remaining numeric columns are treated",
-                 "as markers/traits.")
+        selectInput("pheno_col", "Phenotype column (GWAS / prediction)", choices = NULL),
+        helpText("Rows = individuals. Remaining numeric columns are markers",
+                 "(allele dosage 0/1/2).")
       ),
-      card(
-        card_header("Data preview"),
-        textOutput("data_summary"),
-        DTOutput("preview")
-      )
+      card(card_header("Data preview"),
+           textOutput("data_summary"), DTOutput("preview"))
     )
   ),
 
-  # ---- Distance ----
   nav_panel(
     "Distance",
     layout_sidebar(
       sidebar = sidebar(
-        width = 320,
+        width = 330,
         selectInput("dist_metric", "Distance metric", choices = DIST_CHOICES),
         checkboxInput("dist_scale", "Standardise markers (z-score)", FALSE),
         actionButton("run_dist", "Compute distance", class = "btn-primary w-100"),
         downloadButton("dl_dist", "Download matrix (CSV)", class = "w-100 mt-2")
       ),
-      card(
-        card_header("Distance matrix heatmap"),
-        plotOutput("dist_heatmap", height = "560px")
-      )
+      card(card_header("Distance matrix heatmap"),
+           plotOutput("dist_heatmap", height = "560px"))
     )
   ),
 
-  # ---- Clustering ----
   nav_panel(
     "Clustering",
     layout_sidebar(
       sidebar = sidebar(
-        width = 320,
+        width = 330,
         selectInput("clust_method", "Method", choices = CLUST_CHOICES),
         helpText("Uses the distance matrix from the Distance tab."),
         downloadButton("dl_tree", "Download tree (Newick)", class = "w-100 mt-2")
       ),
-      card(
-        card_header("Dendrogram / tree"),
-        plotOutput("dendro", height = "600px")
-      )
+      card(card_header("Dendrogram / tree"),
+           plotOutput("dendro", height = "600px"))
     )
   ),
 
-  # ---- Ordination ----
   nav_panel(
     "Ordination",
     layout_sidebar(
       sidebar = sidebar(
-        width = 320,
+        width = 330,
         radioButtons("ord_method", "Method",
-                     c("PCA (on markers)" = "pca",
-                       "PCoA (on distance)" = "pcoa")),
+                     c("PCA (on markers)" = "pca", "PCoA (on distance)" = "pcoa")),
         numericInput("ord_x", "Axis (x)", 1, min = 1, max = 10),
         numericInput("ord_y", "Axis (y)", 2, min = 1, max = 10)
       ),
       layout_columns(
         col_widths = c(8, 4),
-        card(card_header("Ordination plot"),
-             plotOutput("ord_plot", height = "560px")),
-        card(card_header("Variance explained"),
-             plotOutput("ord_scree", height = "560px"))
+        card(card_header("Ordination plot"), plotOutput("ord_plot", height = "560px")),
+        card(card_header("Variance explained"), plotOutput("ord_scree", height = "560px"))
       )
     )
   ),
 
-  # ---- Mantel ----
   nav_panel(
     "Mantel test",
     layout_sidebar(
       sidebar = sidebar(
-        width = 320,
-        selectInput("mantel_a", "Matrix A metric", choices = DIST_CHOICES,
-                    selected = "euclidean"),
-        selectInput("mantel_b", "Matrix B metric", choices = DIST_CHOICES,
-                    selected = "manhattan"),
+        width = 330,
+        selectInput("mantel_a", "Matrix A metric", choices = DIST_CHOICES, selected = "euclidean"),
+        selectInput("mantel_b", "Matrix B metric", choices = DIST_CHOICES, selected = "manhattan"),
         numericInput("mantel_perm", "Permutations", 999, min = 99, max = 9999),
         actionButton("run_mantel", "Run Mantel test", class = "btn-primary w-100")
       ),
-      card(
-        card_header("Mantel matrix-correlation result"),
-        verbatimTextOutput("mantel_out"),
-        plotOutput("mantel_plot", height = "420px")
+      card(card_header("Mantel matrix-correlation result"),
+           verbatimTextOutput("mantel_out"), plotOutput("mantel_plot", height = "420px"))
+    )
+  ),
+
+  nav_panel(
+    "Diversity",
+    layout_sidebar(
+      sidebar = sidebar(
+        width = 330,
+        helpText("Per-marker diversity from allele dosages."),
+        helpText("Fst (Nei's Gst) needs a grouping column."),
+        downloadButton("dl_div", "Download stats (CSV)", class = "w-100 mt-2")
+      ),
+      layout_columns(
+        col_widths = c(12),
+        layout_columns(
+          col_widths = c(3, 3, 3, 3),
+          value_box("Mean MAF", textOutput("vb_maf"), theme = "primary"),
+          value_box("Mean He", textOutput("vb_he"), theme = "primary"),
+          value_box("Mean PIC", textOutput("vb_pic"), theme = "primary"),
+          value_box("Overall Fst", textOutput("vb_fst"), theme = "secondary")
+        ),
+        card(card_header("Diversity distributions"), plotOutput("div_plot", height = "360px")),
+        card(card_header("Per-marker statistics"), DTOutput("div_table"))
+      )
+    )
+  ),
+
+  nav_panel(
+    "GWAS",
+    layout_sidebar(
+      sidebar = sidebar(
+        width = 330,
+        numericInput("gwas_pc", "PCs for structure correction", 2, min = 0, max = 10),
+        numericInput("gwas_alpha", "Significance (alpha)", 0.05, min = 1e-4, max = 1, step = 0.01),
+        actionButton("run_gwas", "Run GWAS", class = "btn-primary w-100"),
+        downloadButton("dl_gwas", "Download results (CSV)", class = "w-100 mt-2")
+      ),
+      layout_columns(
+        col_widths = c(8, 4),
+        card(card_header("Manhattan plot"), plotOutput("manhattan", height = "420px")),
+        card(card_header("QQ plot"), plotOutput("qqplot", height = "420px")),
+        card(card_header("Top associations"), DTOutput("gwas_table"))
+      )
+    )
+  ),
+
+  nav_panel(
+    "Prediction",
+    layout_sidebar(
+      sidebar = sidebar(
+        width = 330,
+        checkboxGroupInput("pred_models", "Models",
+                           choices = available_models(), selected = c("gblup")),
+        numericInput("pred_k", "CV folds", 5, min = 2, max = 10),
+        actionButton("run_pred", "Run cross-validation", class = "btn-primary w-100"),
+        hr(),
+        helpText("Then fit a final GBLUP for breeding values:"),
+        actionButton("run_gebv", "Fit GBLUP & estimate GEBVs", class = "btn-outline-primary w-100"),
+        downloadButton("dl_gebv", "Download GEBVs (CSV)", class = "w-100 mt-2")
+      ),
+      layout_columns(
+        col_widths = c(7, 5),
+        card(card_header("Cross-validated predictive ability"),
+             plotOutput("pred_plot", height = "380px")),
+        card(card_header("Accuracy by model"), DTOutput("pred_table")),
+        card(card_header("Genomic breeding values (GBLUP)"),
+             textOutput("gebv_h2"), DTOutput("gebv_table"))
       )
     )
   ),
@@ -197,7 +303,7 @@ server <- function(input, output, session) {
 
   observeEvent(input$demo, {
     rv$data <- simulate_demo()
-    showNotification("Loaded demo SNP dataset (36 individuals, 3 populations).",
+    showNotification("Loaded demo dataset (36 individuals, 3 populations, 60 SNPs, 1 trait).",
                      type = "message")
   })
 
@@ -206,24 +312,27 @@ server <- function(input, output, session) {
       utils::read.csv(input$file$datapath, header = input$header,
                       check.names = FALSE, stringsAsFactors = FALSE),
       error = function(e) {
-        showNotification(paste("Could not read file:", conditionMessage(e)),
-                         type = "error"); NULL
+        showNotification(paste("Could not read file:", conditionMessage(e)), type = "error")
+        NULL
       })
     if (!is.null(df)) rv$data <- df
   })
 
-  # keep column selectors in sync with the loaded data
   observeEvent(rv$data, {
-    nm <- names(rv$data)
+    nm  <- names(rv$data)
+    num <- nm[vapply(rv$data, is.numeric, logical(1))]
     updateSelectInput(session, "id_col", choices = nm, selected = nm[1])
-    grp <- if (length(nm) > 1) c("(none)" = "", nm) else c("(none)" = "")
-    updateSelectInput(session, "group_col", choices = grp,
-                      selected = if (length(nm) > 1) nm[2] else "")
+    updateSelectInput(session, "group_col",
+                      choices = c("(none)" = "", nm),
+                      selected = if ("Population" %in% nm) "Population" else "")
+    updateSelectInput(session, "pheno_col",
+                      choices = c("(none)" = "", num),
+                      selected = if ("Trait" %in% num) "Trait" else "")
   })
 
   marker_mat <- reactive({
     req(rv$data, input$id_col)
-    X <- numeric_matrix(rv$data, input$id_col, input$group_col)
+    X <- numeric_matrix(rv$data, input$id_col, input$group_col, input$pheno_col)
     validate(need(ncol(X) >= 2, "Need at least two numeric marker columns."))
     rownames(X) <- as.character(rv$data[[input$id_col]])
     X
@@ -234,42 +343,37 @@ server <- function(input, output, session) {
       factor(rv$data[[input$group_col]]) else NULL
   })
 
+  pheno <- reactive({
+    if (!is.null(input$pheno_col) && nzchar(input$pheno_col))
+      as.numeric(rv$data[[input$pheno_col]]) else NULL
+  })
+
   output$data_summary <- renderText({
     if (is.null(rv$data)) return("No data loaded. Upload a CSV or load the demo dataset.")
     sprintf("%d rows x %d columns loaded.", nrow(rv$data), ncol(rv$data))
   })
 
-  output$preview <- renderDT({
-    req(rv$data)
-    datatable(rv$data, options = list(scrollX = TRUE, pageLength = 8),
-              rownames = FALSE)
-  })
+  output$preview <- renderDT(
+    datatable(req(rv$data), options = list(scrollX = TRUE, pageLength = 8), rownames = FALSE)
+  )
 
   # ---- distance ----
   scaled_mat <- reactive({
     X <- marker_mat()
-    if (isTRUE(input$dist_scale)) {
-      X <- scale(X)
-      X[is.nan(X)] <- 0
-    }
+    if (isTRUE(input$dist_scale)) { X <- scale(X); X[is.nan(X)] <- 0 }
     X
   })
 
-  dist_obj <- eventReactive(input$run_dist, {
-    compute_distance(scaled_mat(), input$dist_metric)
-  })
+  dist_obj <- eventReactive(input$run_dist, compute_distance(scaled_mat(), input$dist_metric))
 
   output$dist_heatmap <- renderPlot({
-    d <- dist_obj()
-    m <- as.matrix(d)
-    ord <- hclust(d, "average")$order
-    m <- m[ord, ord]
+    d <- dist_obj(); m <- as.matrix(d)
+    ord <- hclust(d, "average")$order; m <- m[ord, ord]
     df <- expand.grid(x = rownames(m), y = colnames(m))
     df$value <- as.vector(m)
     df$x <- factor(df$x, levels = rownames(m))
     df$y <- factor(df$y, levels = rev(rownames(m)))
-    ggplot(df, aes(x, y, fill = value)) +
-      geom_tile() +
+    ggplot(df, aes(x, y, fill = value)) + geom_tile() +
       scale_fill_viridis_c(option = "D", name = "distance") +
       theme_minimal(base_size = 11) +
       theme(axis.text.x = element_text(angle = 90, vjust = .5, hjust = 1),
@@ -278,24 +382,24 @@ server <- function(input, output, session) {
 
   output$dl_dist <- downloadHandler(
     filename = function() paste0("distance_", input$dist_metric, ".csv"),
-    content = function(f) utils::write.csv(as.matrix(dist_obj()), f)
+    content  = function(f) utils::write.csv(as.matrix(dist_obj()), f)
   )
 
   # ---- clustering ----
   tree_obj <- reactive({
     d <- dist_obj()
-    if (input$clust_method == "nj") ape::nj(d)
-    else hclust(d, method = input$clust_method)
+    if (input$clust_method == "nj") ape::nj(d) else hclust(d, method = input$clust_method)
   })
 
   output$dendro <- renderPlot({
-    obj <- tree_obj()
-    g <- groups()
+    obj <- tree_obj(); g <- groups()
     if (inherits(obj, "phylo")) {
-      tipcol <- if (!is.null(g)) {
+      tipcol <- "black"
+      if (!is.null(g)) {
         pal <- grDevices::hcl.colors(nlevels(g), "Dark 3")
-        pal[as.integer(g)][match(obj$tip.label, rownames(as.matrix(dist_obj())))]
-      } else "black"
+        names_order <- rownames(as.matrix(dist_obj()))
+        tipcol <- pal[as.integer(g)][match(obj$tip.label, names_order)]
+      }
       ape::plot.phylo(obj, type = "unrooted", cex = .8, tip.color = tipcol,
                       lab4ut = "axial", no.margin = TRUE)
     } else {
@@ -305,7 +409,7 @@ server <- function(input, output, session) {
 
   output$dl_tree <- downloadHandler(
     filename = function() "genosuite_tree.nwk",
-    content = function(f) {
+    content  = function(f) {
       obj <- tree_obj()
       phy <- if (inherits(obj, "phylo")) obj else ape::as.phylo(obj)
       ape::write.tree(phy, file = f)
@@ -314,17 +418,14 @@ server <- function(input, output, session) {
 
   # ---- ordination ----
   output$ord_plot <- renderPlot({
-    ax <- input$ord_x; ay <- input$ord_y
-    g <- groups()
+    ax <- input$ord_x; ay <- input$ord_y; g <- groups()
     if (input$ord_method == "pca") {
-      pr <- prcomp(scaled_mat(), scale. = FALSE)
-      sco <- pr$x
+      pr <- prcomp(scaled_mat(), scale. = FALSE); sco <- pr$x
       ve <- (pr$sdev^2) / sum(pr$sdev^2)
       xl <- sprintf("PC%d (%.1f%%)", ax, 100 * ve[ax])
       yl <- sprintf("PC%d (%.1f%%)", ay, 100 * ve[ay])
     } else {
-      cm <- cmdscale(dist_obj(), k = max(ax, ay), eig = TRUE)
-      sco <- cm$points
+      cm <- cmdscale(dist_obj(), k = max(ax, ay), eig = TRUE); sco <- cm$points
       ve <- cm$eig[cm$eig > 0] / sum(cm$eig[cm$eig > 0])
       xl <- sprintf("PCoA %d (%.1f%%)", ax, 100 * ve[ax])
       yl <- sprintf("PCoA %d (%.1f%%)", ay, 100 * ve[ay])
@@ -340,17 +441,14 @@ server <- function(input, output, session) {
 
   output$ord_scree <- renderPlot({
     if (input$ord_method == "pca") {
-      pr <- prcomp(scaled_mat(), scale. = FALSE)
-      ve <- (pr$sdev^2) / sum(pr$sdev^2)
+      pr <- prcomp(scaled_mat(), scale. = FALSE); ve <- (pr$sdev^2) / sum(pr$sdev^2)
     } else {
       cm <- cmdscale(dist_obj(), k = 8, eig = TRUE)
       ev <- cm$eig[cm$eig > 0]; ve <- ev / sum(ev)
     }
     ve <- head(ve, 10)
-    df <- data.frame(axis = factor(seq_along(ve)), ve = 100 * ve)
-    ggplot(df, aes(axis, ve)) +
-      geom_col(fill = "#1f7a3d") +
-      labs(x = "axis", y = "% variance") +
+    ggplot(data.frame(axis = factor(seq_along(ve)), ve = 100 * ve), aes(axis, ve)) +
+      geom_col(fill = "#1f7a3d") + labs(x = "axis", y = "% variance") +
       theme_minimal(base_size = 13)
   })
 
@@ -359,24 +457,147 @@ server <- function(input, output, session) {
     X <- scaled_mat()
     da <- compute_distance(X, input$mantel_a)
     db <- compute_distance(X, input$mantel_b)
-    list(r = vegan::mantel(da, db, permutations = input$mantel_perm),
-         da = da, db = db)
+    list(r = vegan::mantel(da, db, permutations = input$mantel_perm), da = da, db = db)
   })
 
-  output$mantel_out <- renderPrint({
-    print(mantel_res()$r)
-  })
-
+  output$mantel_out  <- renderPrint(print(mantel_res()$r))
   output$mantel_plot <- renderPlot({
     res <- mantel_res()
-    df <- data.frame(a = as.vector(res$da), b = as.vector(res$db))
-    ggplot(df, aes(a, b)) +
+    ggplot(data.frame(a = as.vector(res$da), b = as.vector(res$db)), aes(a, b)) +
       geom_point(alpha = .4, colour = "#1f7a3d") +
       geom_smooth(method = "lm", se = FALSE, colour = "#b5651d") +
-      labs(x = paste("distance:", names(which(DIST_CHOICES == input$mantel_a))),
-           y = paste("distance:", names(which(DIST_CHOICES == input$mantel_b)))) +
+      labs(x = names(which(DIST_CHOICES == input$mantel_a)),
+           y = names(which(DIST_CHOICES == input$mantel_b))) +
       theme_minimal(base_size = 13)
   })
+
+  # ---- diversity ----
+  div_res <- reactive({
+    X <- marker_mat()
+    d <- diversity_stats(X)
+    g <- groups()
+    if (!is.null(g) && nlevels(g) > 1) d <- merge(d, fst_nei(X, g), by = "marker")
+    d
+  })
+
+  output$vb_maf <- renderText(sprintf("%.3f", mean(div_res()$MAF, na.rm = TRUE)))
+  output$vb_he  <- renderText(sprintf("%.3f", mean(div_res()$He,  na.rm = TRUE)))
+  output$vb_pic <- renderText(sprintf("%.3f", mean(div_res()$PIC, na.rm = TRUE)))
+  output$vb_fst <- renderText({
+    d <- div_res()
+    if ("Fst" %in% names(d)) sprintf("%.3f", mean(d$Fst, na.rm = TRUE)) else "n/a"
+  })
+
+  output$div_plot <- renderPlot({
+    d <- div_res()
+    long <- rbind(
+      data.frame(stat = "MAF", value = d$MAF),
+      data.frame(stat = "He",  value = d$He),
+      data.frame(stat = "PIC", value = d$PIC)
+    )
+    ggplot(long, aes(value, fill = stat)) +
+      geom_histogram(bins = 20, alpha = .8, colour = "white") +
+      facet_wrap(~stat, scales = "free") +
+      scale_fill_viridis_d(option = "D", end = .8, guide = "none") +
+      theme_minimal(base_size = 12) + labs(x = NULL, y = "markers")
+  })
+
+  output$div_table <- renderDT(
+    datatable(round_df(div_res()), options = list(pageLength = 8, scrollX = TRUE),
+              rownames = FALSE)
+  )
+
+  output$dl_div <- downloadHandler(
+    filename = function() "diversity_stats.csv",
+    content  = function(f) utils::write.csv(div_res(), f, row.names = FALSE)
+  )
+
+  # ---- gwas ----
+  gwas_res <- eventReactive(input$run_gwas, {
+    y <- pheno()
+    validate(need(!is.null(y), "Select a phenotype column on the Data tab."))
+    gwas_scan(y, marker_mat(), n_pc = input$gwas_pc)
+  })
+
+  gwas_thresh <- reactive(-log10(input$gwas_alpha / nrow(gwas_res())))
+
+  output$manhattan <- renderPlot({
+    res <- gwas_res(); thr <- gwas_thresh()
+    res$sig <- res$logp >= thr
+    ggplot(res, aes(index, logp, colour = sig)) +
+      geom_point(size = 2) +
+      geom_hline(yintercept = thr, linetype = 2, colour = "#b5651d") +
+      scale_colour_manual(values = c("FALSE" = "#9bb8a6", "TRUE" = "#1f7a3d"), guide = "none") +
+      labs(x = "marker index", y = expression(-log[10](p))) +
+      theme_minimal(base_size = 13)
+  })
+
+  output$qqplot <- renderPlot({
+    res <- gwas_res()
+    obs <- sort(res$logp[is.finite(res$logp)], decreasing = TRUE)
+    exp <- -log10(ppoints(length(obs)))
+    ggplot(data.frame(exp = exp, obs = obs), aes(exp, obs)) +
+      geom_abline(slope = 1, intercept = 0, colour = "grey60") +
+      geom_point(colour = "#1f7a3d", size = 2) +
+      labs(x = expression(Expected~-log[10](p)), y = expression(Observed~-log[10](p))) +
+      theme_minimal(base_size = 13)
+  })
+
+  output$gwas_table <- renderDT({
+    res <- gwas_res()
+    res <- res[order(res$p), c("marker", "index", "effect", "p", "logp")]
+    datatable(round_df(res), options = list(pageLength = 8), rownames = FALSE)
+  })
+
+  output$dl_gwas <- downloadHandler(
+    filename = function() "gwas_results.csv",
+    content  = function(f) utils::write.csv(gwas_res(), f, row.names = FALSE)
+  )
+
+  # ---- prediction ----
+  cv_res <- eventReactive(input$run_pred, {
+    y <- pheno()
+    validate(need(!is.null(y), "Select a phenotype column on the Data tab."))
+    validate(need(length(input$pred_models) >= 1, "Select at least one model."))
+    withProgress(message = "Cross-validating models...", {
+      gs_cv(y, marker_mat(), models = input$pred_models, k = input$pred_k, seed = 1)
+    })
+  })
+
+  output$pred_plot  <- renderPlot(plot(cv_res()))
+  output$pred_table <- renderDT(
+    datatable(round_df(as.data.frame(summary(cv_res()))),
+              options = list(dom = "t"), rownames = FALSE)
+  )
+
+  gebv_res <- eventReactive(input$run_gebv, {
+    y <- pheno()
+    validate(need(!is.null(y), "Select a phenotype column on the Data tab."))
+    X <- marker_mat()
+    fit <- gblup(y, geno = X)
+    list(h2 = fit$h2,
+         tab = data.frame(ID = rownames(X), GEBV = round(as.numeric(fit$gebv), 4),
+                          row.names = NULL))
+  })
+
+  output$gebv_h2 <- renderText({
+    sprintf("Estimated genomic heritability (h2): %.3f", gebv_res()$h2)
+  })
+  output$gebv_table <- renderDT({
+    tab <- gebv_res()$tab
+    datatable(tab[order(-tab$GEBV), ], options = list(pageLength = 8), rownames = FALSE)
+  })
+  output$dl_gebv <- downloadHandler(
+    filename = function() "gebv.csv",
+    content  = function(f) utils::write.csv(gebv_res()$tab, f, row.names = FALSE)
+  )
+}
+
+# round numeric columns of a data frame for display
+round_df <- function(df, digits = 4) {
+  num <- vapply(df, is.numeric, logical(1))
+  df[num] <- lapply(df[num], round, digits)
+  df
 }
 
 shinyApp(ui, server)

@@ -11,6 +11,10 @@ build/
 *.exe
 R-portable/
 
+# one-off dev/inspection scripts
+inspect_gsbench.R
+test_predict.R
+
 # OS
 Thumbs.db
 .DS_Store
