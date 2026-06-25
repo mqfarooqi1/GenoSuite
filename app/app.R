@@ -20,6 +20,9 @@ library(DT)
 library(ggplot2)
 library(GSbench)
 
+# allow large marker files (up to 300 MB)
+options(shiny.maxRequestSize = 300 * 1024^2)
+
 # ---- data helpers ---------------------------------------------------------
 
 ## Structured demo SNP dataset with a heritable quantitative trait.
@@ -145,7 +148,8 @@ ui <- page_navbar(
     layout_sidebar(
       sidebar = sidebar(
         width = 330,
-        fileInput("file", "Upload data (CSV)", accept = c(".csv", ".txt")),
+        fileInput("file", "Upload data (CSV or Excel)",
+                  accept = c(".csv", ".txt", ".xlsx", ".xls")),
         checkboxInput("header", "First row is header", TRUE),
         actionButton("demo", "Load demo SNP dataset", class = "btn-primary w-100"),
         hr(),
@@ -290,9 +294,45 @@ ui <- page_navbar(
     )
   ),
 
+  nav_panel(
+    "Kinship",
+    layout_sidebar(
+      sidebar = sidebar(
+        width = 330,
+        helpText("Genomic relationship matrix (VanRaden) from marker dosages."),
+        numericInput("grm_maf", "Minimum MAF", 0.05, min = 0, max = 0.5, step = 0.01),
+        actionButton("run_grm", "Compute GRM", class = "btn-primary w-100"),
+        downloadButton("dl_grm", "Download GRM (CSV)", class = "w-100 mt-2")
+      ),
+      layout_columns(
+        col_widths = c(7, 5),
+        card(card_header("Genomic relationship heatmap"),
+             plotOutput("grm_heatmap", height = "560px")),
+        card(card_header("Relationship coefficients"),
+             plotOutput("grm_hist", height = "560px"))
+      )
+    )
+  ),
+
+  nav_panel(
+    "LD",
+    layout_sidebar(
+      sidebar = sidebar(
+        width = 330,
+        helpText("Pairwise linkage disequilibrium (r²) between markers."),
+        numericInput("ld_max", "Markers to include (first N)", 100, min = 5, max = 2000),
+        actionButton("run_ld", "Compute LD", class = "btn-primary w-100")
+      ),
+      layout_columns(
+        col_widths = c(7, 5),
+        card(card_header("LD (r²) heatmap"), plotOutput("ld_heatmap", height = "520px")),
+        card(card_header("LD decay"), plotOutput("ld_decay", height = "520px"))
+      )
+    )
+  ),
+
   nav_spacer(),
-  nav_item(tags$a("About", href = "#", onclick = "return false;",
-                  title = "GenoSuite — modern numerical-genomics analytics")),
+  nav_item(actionLink("about_app", "About")),
   nav_item(actionLink("quit_app", "Quit", icon = icon("power-off")))
 )
 
@@ -316,9 +356,16 @@ server <- function(input, output, session) {
   })
 
   observeEvent(input$file, {
+    ext <- tolower(tools::file_ext(input$file$name))
     df <- tryCatch(
-      utils::read.csv(input$file$datapath, header = input$header,
-                      check.names = FALSE, stringsAsFactors = FALSE),
+      if (ext %in% c("xlsx", "xls")) {
+        as.data.frame(readxl::read_excel(input$file$datapath,
+                                         col_names = input$header),
+                      check.names = FALSE, stringsAsFactors = FALSE)
+      } else {
+        utils::read.csv(input$file$datapath, header = input$header,
+                        check.names = FALSE, stringsAsFactors = FALSE)
+      },
       error = function(e) {
         showNotification(paste("Could not read file:", conditionMessage(e)), type = "error")
         NULL
@@ -599,6 +646,95 @@ server <- function(input, output, session) {
     filename = function() "gebv.csv",
     content  = function(f) utils::write.csv(gebv_res()$tab, f, row.names = FALSE)
   )
+
+  # ---- kinship / GRM ----
+  grm_obj <- eventReactive(input$run_grm, {
+    X <- marker_mat()
+    G <- GSbench::Gmatrix(X, min_maf = input$grm_maf)
+    if (is.null(rownames(G))) { rownames(G) <- rownames(X); colnames(G) <- rownames(X) }
+    G
+  })
+
+  output$grm_heatmap <- renderPlot({
+    G <- grm_obj()
+    ord <- hclust(dist(G), "average")$order
+    G2 <- G[ord, ord]
+    df <- expand.grid(x = rownames(G2), y = colnames(G2))
+    df$value <- as.vector(G2)
+    df$x <- factor(df$x, levels = rownames(G2))
+    df$y <- factor(df$y, levels = rev(rownames(G2)))
+    ggplot(df, aes(x, y, fill = value)) + geom_tile() +
+      scale_fill_viridis_c(option = "D", name = "relationship") +
+      theme_minimal(base_size = 11) +
+      theme(axis.text.x = element_text(angle = 90, vjust = .5, hjust = 1),
+            axis.title = element_blank())
+  })
+
+  output$grm_hist <- renderPlot({
+    G <- grm_obj()
+    df <- rbind(
+      data.frame(type = "Off-diagonal (relatedness)", value = G[upper.tri(G)]),
+      data.frame(type = "Diagonal (1 + inbreeding)",  value = diag(G))
+    )
+    ggplot(df, aes(value, fill = type)) +
+      geom_histogram(bins = 25, alpha = .8, colour = "white") +
+      facet_wrap(~type, scales = "free", ncol = 1) +
+      scale_fill_viridis_d(option = "D", end = .7, guide = "none") +
+      theme_minimal(base_size = 12) + labs(x = "relationship coefficient", y = "count")
+  })
+
+  output$dl_grm <- downloadHandler(
+    filename = function() "grm.csv",
+    content  = function(f) utils::write.csv(grm_obj(), f)
+  )
+
+  # ---- linkage disequilibrium ----
+  ld_obj <- eventReactive(input$run_ld, {
+    X  <- marker_mat()
+    n  <- min(ncol(X), input$ld_max)
+    Xs <- X[, seq_len(n), drop = FALSE]
+    Xs <- Xs[, apply(Xs, 2, stats::sd) > 0, drop = FALSE]   # drop monomorphic
+    validate(need(ncol(Xs) >= 2, "Need at least two polymorphic markers."))
+    cor(Xs)^2
+  })
+
+  output$ld_heatmap <- renderPlot({
+    r2 <- ld_obj()
+    df <- expand.grid(i = seq_len(nrow(r2)), j = seq_len(ncol(r2)))
+    df$r2 <- as.vector(r2)
+    ggplot(df, aes(i, j, fill = r2)) + geom_raster() +
+      scale_fill_viridis_c(option = "B", name = expression(r^2), limits = c(0, 1)) +
+      coord_equal() + theme_minimal(base_size = 12) + labs(x = "marker", y = "marker")
+  })
+
+  output$ld_decay <- renderPlot({
+    r2 <- ld_obj()
+    ut <- upper.tri(r2)
+    idx <- which(ut, arr.ind = TRUE)
+    dd <- data.frame(dist = abs(idx[, 1] - idx[, 2]), r2 = r2[ut])
+    ggplot(dd, aes(dist, r2)) +
+      geom_point(alpha = .25, colour = "#1f7a3d") +
+      geom_smooth(method = "loess", se = FALSE, colour = "#b5651d") +
+      labs(x = "marker-pair separation (index distance)", y = expression(r^2)) +
+      theme_minimal(base_size = 13)
+  })
+
+  # ---- about ----
+  observeEvent(input$about_app, {
+    showModal(modalDialog(
+      title = "About GenoSuite", easyClose = TRUE, footer = modalButton("Close"),
+      tags$p(tags$strong("GenoSuite 0.1.1"),
+             " — modern numerical-genomics analytics."),
+      tags$p("© 2026 Muhammad Farooqi. Released under the MIT License."),
+      tags$p(tags$a(href = "https://mqfarooqi1.github.io/GenoSuite/", target = "_blank",
+                    "Documentation & user manual")),
+      tags$hr(),
+      tags$p(tags$em("Disclaimer: "),
+             "GenoSuite is provided “as is”, without warranty of any kind. ",
+             "The author is not liable for any outcome arising from its use. ",
+             "Always validate results before using them for decisions.")
+    ))
+  })
 }
 
 # round numeric columns of a data frame for display

@@ -184,6 +184,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#diversity" id="toc-diversity" class="nav-link" data-scroll-target="#diversity">Diversity</a></li>
   <li><a href="#gwas" id="toc-gwas" class="nav-link" data-scroll-target="#gwas">GWAS</a></li>
   <li><a href="#prediction" id="toc-prediction" class="nav-link" data-scroll-target="#prediction">Prediction</a></li>
+  <li><a href="#kinship" id="toc-kinship" class="nav-link" data-scroll-target="#kinship">Kinship</a></li>
+  <li><a href="#linkage-disequilibrium-ld" id="toc-linkage-disequilibrium-ld" class="nav-link" data-scroll-target="#linkage-disequilibrium-ld">Linkage disequilibrium (LD)</a></li>
   </ul></li>
   <li><a href="#reproducibility-citation" id="toc-reproducibility-citation" class="nav-link" data-scroll-target="#reproducibility-citation">Reproducibility &amp; citation</a></li>
   <li><a href="#support" id="toc-support" class="nav-link" data-scroll-target="#support">Support</a></li>
@@ -220,7 +222,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <ol type="1">
 <li>Go to the <strong><a href="./download.html">Download</a></strong> page and download the latest <code>GenoSuite-Setup.exe</code>.</li>
 <li>Double-click the installer and follow the prompts.</li>
-<li>Launch <strong>GenoSuite</strong> from the Start menu. The workspace opens in your default web browser; all computation runs locally on your machine.</li>
+<li>Launch <strong>GenoSuite</strong> from the Start menu. It opens in its own application window; all computation runs locally on your machine.</li>
 </ol>
 <p>No separate R installation is required — the installer is self-contained.</p>
 </section>
@@ -237,7 +239,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="data-format" class="level2">
 <h2 class="anchored" data-anchor-id="data-format">Data format</h2>
-<p>GenoSuite expects a <strong>CSV</strong> file in which:</p>
+<p>GenoSuite reads <strong>CSV</strong> or <strong>Excel (<code>.xlsx</code>/<code>.xls</code>)</strong> files in which:</p>
 <ul>
 <li><strong>Each row is one individual / accession / OTU.</strong></li>
 <li>One column holds a unique <strong>ID</strong> (e.g.&nbsp;<code>Ind001</code>).</li>
@@ -384,6 +386,14 @@ Tip
 <figcaption>Cross-validated predictive ability by model</figcaption>
 </figure>
 </div>
+</section>
+<section id="kinship" class="level3">
+<h3 class="anchored" data-anchor-id="kinship">Kinship</h3>
+<p>Computes the <strong>genomic relationship matrix (GRM)</strong> among individuals using the VanRaden method (via GSbench). Shows a clustered heatmap of pairwise relationships and the distribution of off-diagonal (relatedness) and diagonal (1 + inbreeding) coefficients; exports the GRM to CSV. A minimum minor-allele frequency filters out rare markers before the calculation.</p>
+</section>
+<section id="linkage-disequilibrium-ld" class="level3">
+<h3 class="anchored" data-anchor-id="linkage-disequilibrium-ld">Linkage disequilibrium (LD)</h3>
+<p>Computes pairwise <strong>r²</strong> between markers, shown as an LD heatmap, with an <strong>LD decay</strong> plot of r² against marker separation. The number of markers can be capped for very large datasets.</p>
 </section>
 </section>
 <section id="reproducibility-citation" class="level2">

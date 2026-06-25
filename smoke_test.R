@@ -35,4 +35,16 @@ cat("CV models:\n"); print(round_df(as.data.frame(summary(cv))))
 gb <- gblup(y, geno = X)
 cat("GBLUP h2:", round(gb$h2, 3), " gebv length:", length(gb$gebv), "\n")
 
+# kinship / GRM
+G <- GSbench::Gmatrix(X, min_maf = 0.05)
+cat("GRM dims:", dim(G), " mean diag:", round(mean(diag(G)), 3), "\n")
+
+# linkage disequilibrium
+Xs <- X[, apply(X, 2, stats::sd) > 0, drop = FALSE]
+r2 <- cor(Xs)^2
+cat("LD r2 dims:", dim(r2), " mean off-diag r2:", round(mean(r2[upper.tri(r2)]), 3), "\n")
+
+# excel support
+cat("readxl available:", requireNamespace("readxl", quietly = TRUE), "\n")
+
 cat("ALL SMOKE TESTS PASSED\n")

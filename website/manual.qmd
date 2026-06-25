@@ -14,8 +14,8 @@ module in GenoSuite.
 1. Go to the **[Download](download.qmd)** page and download the latest
    `GenoSuite-Setup.exe`.
 2. Double-click the installer and follow the prompts.
-3. Launch **GenoSuite** from the Start menu. The workspace opens in your default
-   web browser; all computation runs locally on your machine.
+3. Launch **GenoSuite** from the Start menu. It opens in its own application
+   window; all computation runs locally on your machine.
 
 No separate R installation is required — the installer is self-contained.
 
@@ -34,7 +34,7 @@ shiny::runApp("app")
 
 ## Data format
 
-GenoSuite expects a **CSV** file in which:
+GenoSuite reads **CSV** or **Excel (`.xlsx`/`.xls`)** files in which:
 
 - **Each row is one individual / accession / OTU.**
 - One column holds a unique **ID** (e.g. `Ind001`).
@@ -148,6 +148,20 @@ Cross-validated **genomic prediction** powered by the
 - Requires a phenotype column.
 
 ![Cross-validated predictive ability by model](images/prediction.png){width=70%}
+
+### Kinship
+
+Computes the **genomic relationship matrix (GRM)** among individuals using the
+VanRaden method (via GSbench). Shows a clustered heatmap of pairwise
+relationships and the distribution of off-diagonal (relatedness) and diagonal
+(1 + inbreeding) coefficients; exports the GRM to CSV. A minimum minor-allele
+frequency filters out rare markers before the calculation.
+
+### Linkage disequilibrium (LD)
+
+Computes pairwise **r²** between markers, shown as an LD heatmap, with an **LD
+decay** plot of r² against marker separation. The number of markers can be
+capped for very large datasets.
 
 ## Reproducibility & citation
 

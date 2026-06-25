@@ -1,0 +1,25 @@
+cff-version: 1.2.0
+message: "If you use GenoSuite, please cite it as below."
+title: "GenoSuite: modern numerical-genomics analytics"
+abstract: >-
+  A self-contained desktop application for multivariate analysis of genetic
+  marker data: genetic distances, clustering and dendrograms, ordination
+  (PCA/PCoA), Mantel tests, diversity and population differentiation (Fst),
+  kinship, linkage disequilibrium, GWAS, and genomic prediction.
+type: software
+authors:
+  - given-names: Muhammad
+    family-names: Farooqi
+    email: mqfarooqi@gmail.com
+version: 0.1.1
+date-released: 2026-06-25
+license: MIT
+repository-code: "https://github.com/mqfarooqi1/GenoSuite"
+url: "https://mqfarooqi1.github.io/GenoSuite/"
+keywords:
+  - genomics
+  - genomic-selection
+  - population-genetics
+  - GWAS
+  - R
+  - shiny

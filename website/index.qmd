@@ -53,6 +53,11 @@ gradient boosting, stacked ensemble) with genomic breeding values.
 ### Mantel test
 Permutation-based correlation between two distance matrices.
 :::
+::: card
+### Kinship & LD
+Genomic relationship matrix (VanRaden) and pairwise linkage disequilibrium
+(r²) with decay.
+:::
 :::
 
 ## A look inside

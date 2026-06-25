@@ -6,7 +6,7 @@ dist   <- args[1]
 target <- file.path(dist, "R", "library")
 
 direct <- c("shiny", "bslib", "DT", "ggplot2", "ape", "vegan",
-            "GSbench", "glmnet", "ranger", "xgboost", "rrBLUP")
+            "GSbench", "glmnet", "ranger", "xgboost", "rrBLUP", "readxl")
 
 ip   <- installed.packages()
 deps <- tools::package_dependencies(direct, db = ip,
