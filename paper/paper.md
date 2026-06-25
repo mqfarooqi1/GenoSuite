@@ -9,7 +9,7 @@ tags:
   - GWAS
 authors:
   - name: Muhammad Farooqi
-    orcid: 0000-0000-0000-0000
+    orcid: 0000-0003-4918-9791
     affiliation: 1
 affiliations:
   - name: Independent Researcher
