@@ -1,0 +1,135 @@
+[
+  {
+    "objectID": "manual.html",
+    "href": "manual.html",
+    "title": "User Manual",
+    "section": "",
+    "text": "This manual covers installation, the expected data format, and every analysis module in GenoSuite."
+  },
+  {
+    "objectID": "manual.html#installation",
+    "href": "manual.html#installation",
+    "title": "User Manual",
+    "section": "Installation",
+    "text": "Installation\n\nWindows installer (recommended)\n\nGo to the Download page and download the latest GenoSuite-Setup.exe.\nDouble-click the installer and follow the prompts.\nLaunch GenoSuite from the Start menu. The workspace opens in your default web browser; all computation runs locally on your machine.\n\nNo separate R installation is required — the installer is self-contained.\n\n\nRunning from source\nIf you have R installed:\ninstall.packages(c(\"shiny\", \"bslib\", \"DT\", \"ggplot2\", \"ape\", \"vegan\",\n                   \"glmnet\", \"ranger\", \"xgboost\"))\n# install GSbench from R-universe\ninstall.packages(\"GSbench\", repos = \"https://mqfarooqi1.r-universe.dev\")\n\nshiny::runApp(\"app\")"
+  },
+  {
+    "objectID": "manual.html#data-format",
+    "href": "manual.html#data-format",
+    "title": "User Manual",
+    "section": "Data format",
+    "text": "Data format\nGenoSuite expects a CSV file in which:\n\nEach row is one individual / accession / OTU.\nOne column holds a unique ID (e.g. Ind001).\nOptionally, one column holds a grouping variable (e.g. Population), used to colour plots and to compute Fst.\nOptionally, one numeric phenotype column (e.g. Trait), used for GWAS and genomic prediction.\nAll remaining numeric columns are treated as markers, coded as allele dosage: 0, 1, or 2 (copies of the reference/alternate allele).\n\n\n\n\nID\nPopulation\nTrait\nSNP001\nSNP002\n…\n\n\n\n\nInd001\nPop1\n12.4\n0\n2\n…\n\n\nInd002\nPop1\n9.8\n1\n1\n…\n\n\n\nOn the Data tab, use the selectors to tell GenoSuite which columns are the ID, group, and phenotype. Everything else is used as markers.\n\n\n\n\n\n\nTip\n\n\n\nNew to the app? Click Load demo SNP dataset on the Data tab. It loads 36 individuals from 3 populations, 60 SNPs, and a heritable trait — enough to try every module immediately."
+  },
+  {
+    "objectID": "manual.html#modules",
+    "href": "manual.html#modules",
+    "title": "User Manual",
+    "section": "Modules",
+    "text": "Modules\n\nData\nImport a CSV (or load the demo), preview it as an interactive table, and assign the ID, grouping, and phenotype columns. These assignments drive every other module.\n\n\nDistance\nComputes a pairwise distance / dissimilarity matrix among individuals.\n\nMetrics: Euclidean, Manhattan (city-block), 1 − Pearson correlation, Jaccard (presence/absence), Gower.\nStandardise markers rescales each marker to mean 0 / variance 1 before computing Euclidean-type distances.\nThe result is shown as a clustered heatmap and can be exported to CSV.\n\n\n\nClustering\nBuilds a tree from the distance matrix.\n\nMethods: UPGMA (average linkage), Ward’s method, complete linkage, single linkage, and neighbour-joining (NJ).\nHierarchical methods are drawn as dendrograms; NJ as an unrooted tree with tips coloured by group.\nExport the tree in Newick format for use in other phylogenetic software.\n\n\n\n\nNeighbour-joining tree of the demo populations\n\n\n\n\nOrdination\nReduces the data to a few interpretable axes.\n\nPCA is computed directly on the markers.\nPCoA (principal coordinates) is computed on the distance matrix.\nChoose which axes to plot; points are coloured by group, with a scree plot showing the variance explained by each axis.\n\n\n\n\nPCA of the demo populations\n\n\n\n\nMantel test\nTests the correlation between two distance matrices (built with two metrics) using permutations, reporting the Mantel statistic r and its significance, with a scatter plot of the paired distances.\n\n\nDiversity\nSummarises genetic diversity from the allele dosages.\n\nPer marker: allele frequency, minor-allele frequency (MAF), expected heterozygosity (He), observed heterozygosity (Ho), and polymorphism information content (PIC).\nBetween groups: Nei’s Fst (Gst) per marker and overall (requires a grouping column).\nSummary value boxes, distribution histograms, a sortable table, and CSV export.\n\n\n\n\nDistributions of MAF, He, and PIC across markers\n\n\n\n\nGWAS\nPerforms a genome-wide association scan: each marker is regressed on the phenotype.\n\nPC structure correction: include the first k principal components as covariates to control for population structure.\nOutputs a Manhattan plot (with a Bonferroni significance line), a QQ plot to check calibration, and a table of the strongest associations.\nRequires a phenotype column.\n\n\n\n\nManhattan plot from the demo trait\n\n\n\n\nPrediction\nCross-validated genomic prediction powered by the GSbench engine.\n\nModels: GBLUP plus machine-learning predictors — elastic net, random forest, gradient boosting (xgboost), and a stacked ensemble.\nRuns k-fold cross-validation and reports predictive ability (correlation between predicted and observed values on held-out folds), with a bar chart and table.\nFit a final GBLUP to obtain genomic estimated breeding values (GEBVs) and the estimated genomic heritability (h²); export the GEBVs to CSV.\nRequires a phenotype column.\n\n\n\n\nCross-validated predictive ability by model"
+  },
+  {
+    "objectID": "manual.html#reproducibility-citation",
+    "href": "manual.html#reproducibility-citation",
+    "title": "User Manual",
+    "section": "Reproducibility & citation",
+    "text": "Reproducibility & citation\nAnalyses use established methods from the population-genetics and genomic- prediction literature, implemented on top of base R, ape, vegan, and GSbench. If GenoSuite contributes to a publication, please cite it (see the License page)."
+  },
+  {
+    "objectID": "manual.html#support",
+    "href": "manual.html#support",
+    "title": "User Manual",
+    "section": "Support",
+    "text": "Support\nQuestions, bugs, and feature requests: github.com/mqfarooqi1/GenoSuite/issues."
+  },
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "GenoSuite",
+    "section": "",
+    "text": "Modern numerical-genomics analytics — a desktop application for multivariate analysis of genetic marker data, in the spirit of NTSYSpc but rebuilt for the genomic era.\n\nDownload User Manual Source on GitHub"
+  },
+  {
+    "objectID": "index.html#what-it-does",
+    "href": "index.html#what-it-does",
+    "title": "GenoSuite",
+    "section": "What it does",
+    "text": "What it does\nGenoSuite turns SNP / marker tables into publication-ready multivariate analyses through a point-and-click interface — no coding required. It runs as a self-contained Windows application: install one file and launch a graphical workspace.\n\n\nDistance & clustering\nGenetic distance matrices (Euclidean, Manhattan, correlation, Jaccard, Gower) and dendrograms by UPGMA, Ward, and neighbour-joining.\n\n\nOrdination\nInteractive PCA and PCoA with scree plots, coloured by population.\n\n\nDiversity & structure\nPer-marker MAF, heterozygosity, PIC, and population differentiation (Nei’s Fst).\n\n\nGWAS\nSingle-marker association with PC structure correction; Manhattan and QQ plots.\n\n\nGenomic prediction\nCross-validated GBLUP and machine-learning models (elastic net, random forest, gradient boosting, stacked ensemble) with genomic breeding values.\n\n\nMantel test\nPermutation-based correlation between two distance matrices."
+  },
+  {
+    "objectID": "index.html#a-look-inside",
+    "href": "index.html#a-look-inside",
+    "title": "GenoSuite",
+    "section": "A look inside",
+    "text": "A look inside\n\n\n\n\n\n\nPopulation structure (PCA)\n\n\n\n\n\n\n\nNeighbour-joining tree\n\n\n\n\n\n\n\n\n\nGWAS Manhattan plot\n\n\n\n\n\n\n\nGenomic prediction accuracy"
+  },
+  {
+    "objectID": "index.html#quick-start",
+    "href": "index.html#quick-start",
+    "title": "GenoSuite",
+    "section": "Quick start",
+    "text": "Quick start\n\nDownload and install GenoSuite (or run it from source).\nLaunch it — a workspace opens in your browser.\nOn the Data tab, click Load demo SNP dataset (or upload your own CSV).\nExplore the Distance, Clustering, Ordination, Diversity, GWAS, and Prediction tabs.\n\nSee the User Manual for full details on every module and the expected data format.\n\nGenoSuite is free, open-source software released under the MIT License. © 2026 Muhammad Farooqi."
+  },
+  {
+    "objectID": "download.html",
+    "href": "download.html",
+    "title": "Download",
+    "section": "",
+    "text": "GenoSuite ships as a self-contained Windows installer — it bundles everything it needs, so no separate R installation is required.\nDownload GenoSuite-Setup.exe\nThe latest installer is published on the GitHub Releases page.\n\n\n\n\n\n\nNote\n\n\n\nThe installer is large (~200–300 MB) because it includes a private copy of R and all required packages. This is what makes it self-contained: install once, run offline.\n\n\n\n\n\nDownload GenoSuite-Setup.exe.\nDouble-click it and follow the prompts (you may see a Windows SmartScreen notice for a new publisher — choose More info → Run anyway).\nLaunch GenoSuite from the Start menu.\n\n\n\n\n\nWindows 10 or 11 (64-bit)\nA modern web browser (Edge, Chrome, or Firefox) for the interface\n~700 MB free disk space after installation"
+  },
+  {
+    "objectID": "download.html#windows-installer",
+    "href": "download.html#windows-installer",
+    "title": "Download",
+    "section": "",
+    "text": "GenoSuite ships as a self-contained Windows installer — it bundles everything it needs, so no separate R installation is required.\nDownload GenoSuite-Setup.exe\nThe latest installer is published on the GitHub Releases page.\n\n\n\n\n\n\nNote\n\n\n\nThe installer is large (~200–300 MB) because it includes a private copy of R and all required packages. This is what makes it self-contained: install once, run offline.\n\n\n\n\n\nDownload GenoSuite-Setup.exe.\nDouble-click it and follow the prompts (you may see a Windows SmartScreen notice for a new publisher — choose More info → Run anyway).\nLaunch GenoSuite from the Start menu.\n\n\n\n\n\nWindows 10 or 11 (64-bit)\nA modern web browser (Edge, Chrome, or Firefox) for the interface\n~700 MB free disk space after installation"
+  },
+  {
+    "objectID": "download.html#run-from-source",
+    "href": "download.html#run-from-source",
+    "title": "Download",
+    "section": "Run from source",
+    "text": "Run from source\nDevelopers and macOS/Linux users can run GenoSuite from source with R:\ninstall.packages(c(\"shiny\", \"bslib\", \"DT\", \"ggplot2\", \"ape\", \"vegan\",\n                   \"glmnet\", \"ranger\", \"xgboost\"))\ninstall.packages(\"GSbench\", repos = \"https://mqfarooqi1.r-universe.dev\")\n\n# from the cloned repository\nshiny::runApp(\"app\")\nThe full source is on GitHub under the MIT License."
+  },
+  {
+    "objectID": "license.html",
+    "href": "license.html",
+    "title": "License & Copyright",
+    "section": "",
+    "text": "© 2026 Muhammad Farooqi. All rights reserved where not otherwise granted by the licence below.\n“GenoSuite” and its logo are used to identify this software. The source code, documentation, and this website are the original work of the author."
+  },
+  {
+    "objectID": "license.html#copyright",
+    "href": "license.html#copyright",
+    "title": "License & Copyright",
+    "section": "",
+    "text": "© 2026 Muhammad Farooqi. All rights reserved where not otherwise granted by the licence below.\n“GenoSuite” and its logo are used to identify this software. The source code, documentation, and this website are the original work of the author."
+  },
+  {
+    "objectID": "license.html#licence",
+    "href": "license.html#licence",
+    "title": "License & Copyright",
+    "section": "Licence",
+    "text": "Licence\nGenoSuite is free and open-source software, released under the MIT License. You are free to use, copy, modify, and distribute it — including for commercial purposes — provided the copyright notice and licence text are preserved.\nMIT License\n\nCopyright (c) 2026 Muhammad Farooqi\n\nPermission is hereby granted, free of charge, to any person obtaining a copy\nof this software and associated documentation files (the \"Software\"), to deal\nin the Software without restriction, including without limitation the rights\nto use, copy, modify, merge, publish, distribute, sublicense, and/or sell\ncopies of the Software, and to permit persons to whom the Software is\nfurnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in all\ncopies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\nIMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\nFITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\nAUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\nLIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\nOUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE\nSOFTWARE."
+  },
+  {
+    "objectID": "license.html#third-party-components",
+    "href": "license.html#third-party-components",
+    "title": "License & Copyright",
+    "section": "Third-party components",
+    "text": "Third-party components\nThe self-contained installer bundles, and GenoSuite depends on, third-party open-source software that remains under its own licence, including:\n\nThe R language and environment — GNU General Public License (GPL-2 / GPL-3).\nR packages: shiny, bslib, DT, ggplot2 (MIT/GPL), ape, vegan (GPL-2), glmnet, ranger, xgboost, and GSbench (MIT).\n\nThese components are redistributed in accordance with their respective licences. Because the distribution includes GPL-licensed software (R), the bundled installer as a whole is distributed under terms compatible with the GPL; the GenoSuite source code itself is offered under the MIT License above."
+  },
+  {
+    "objectID": "license.html#how-to-cite",
+    "href": "license.html#how-to-cite",
+    "title": "License & Copyright",
+    "section": "How to cite",
+    "text": "How to cite\nIf GenoSuite contributes to a publication, please cite it as:\n\nFarooqi, M. (2026). GenoSuite: modern numerical-genomics analytics. Software. https://github.com/mqfarooqi1/GenoSuite"
+  },
+  {
+    "objectID": "license.html#disclaimer",
+    "href": "license.html#disclaimer",
+    "title": "License & Copyright",
+    "section": "Disclaimer",
+    "text": "Disclaimer\nGenoSuite is provided “as is”, without warranty of any kind. The author is not liable for any outcome arising from its use. Always validate results before using them for decisions."
+  }
+]

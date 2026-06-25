@@ -1,0 +1,34 @@
+/*-- scss:defaults --*/
+$primary:    #1f7a3d;
+$link-color: #1f7a3d;
+$navbar-bg:  #1f7a3d;
+$navbar-fg:  #ffffff;
+
+/*-- scss:rules --*/
+.hero {
+  text-align: center;
+  padding: 2.5rem 1rem 1.5rem;
+}
+.hero img { width: 130px; height: auto; }
+.hero h1 { font-weight: 700; margin-top: .5rem; }
+.hero .lead { font-size: 1.25rem; color: #555; max-width: 720px; margin: .5rem auto 1rem; }
+
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+.feature-grid .card {
+  border: 1px solid #e6e6e6;
+  border-radius: .6rem;
+  padding: 1rem 1.1rem;
+}
+.feature-grid .card h3 { font-size: 1.05rem; color: #1f7a3d; margin-top: 0; }
+
+.btn-genosuite {
+  background: #1f7a3d; color: #fff; border-radius: .5rem;
+  padding: .6rem 1.2rem; font-weight: 600; text-decoration: none;
+  display: inline-block; margin: .25rem;
+}
+.btn-genosuite:hover { background: #19632f; color: #fff; }

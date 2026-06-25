@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 173.2 200" width="173.2" height="200" role="img" aria-label="GenoSuite">
+  <defs>
+    <style>
+      .hexfill { fill: #ffffff; }
+      .hexborder { fill: none; stroke: #1f7a3d; stroke-width: 6; }
+      .branch { fill: none; stroke: #1f7a3d; stroke-width: 4; stroke-linecap: round; }
+      .tip { fill: #f9a825; }
+      .title { fill: #1f7a3d; font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif; font-weight: 700; }
+    </style>
+  </defs>
+
+  <polygon class="hexfill" points="86.6,4 168.2,52 168.2,148 86.6,196 5,148 5,52"/>
+  <polygon class="hexborder" points="86.6,4 168.2,52 168.2,148 86.6,196 5,148 5,52"/>
+
+  <!-- stylised neighbour-joining tree -->
+  <g>
+    <!-- root stem -->
+    <path class="branch" d="M40 92 H66"/>
+    <!-- upper clade -->
+    <path class="branch" d="M66 92 V64 H92"/>
+    <path class="branch" d="M92 64 V52 H120"/>
+    <path class="branch" d="M92 64 V76 H120"/>
+    <!-- lower clade -->
+    <path class="branch" d="M66 92 V120 H92"/>
+    <path class="branch" d="M92 120 V108 H120"/>
+    <path class="branch" d="M92 120 V132 H120"/>
+    <!-- tips -->
+    <circle class="tip" cx="122" cy="52"  r="5"/>
+    <circle class="tip" cx="122" cy="76"  r="5"/>
+    <circle class="tip" cx="122" cy="108" r="5"/>
+    <circle class="tip" cx="122" cy="132" r="5"/>
+  </g>
+
+  <text class="title" x="86.6" y="172" font-size="22" text-anchor="middle">Geno<tspan fill="#f9a825">Suite</tspan></text>
+</svg>

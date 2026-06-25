@@ -1,0 +1,38 @@
+project:
+  type: website
+  output-dir: ../docs
+
+website:
+  title: "GenoSuite"
+  description: "Modern numerical-genomics analytics — a desktop application."
+  favicon: images/logo.svg
+  search: true
+  navbar:
+    background: "#1f7a3d"
+    logo: images/logo.svg
+    title: false
+    left:
+      - text: "Home"
+        href: index.qmd
+      - text: "User Manual"
+        href: manual.qmd
+      - text: "Download"
+        href: download.qmd
+      - text: "License"
+        href: license.qmd
+    right:
+      - icon: github
+        href: https://github.com/mqfarooqi1/GenoSuite
+        aria-label: GitHub
+  page-footer:
+    border: true
+    left: "© 2026 Muhammad Farooqi · Released under the MIT License."
+    right: "Built with [Quarto](https://quarto.org)."
+
+format:
+  html:
+    theme: [cosmo, styles.scss]
+    toc: true
+    toc-depth: 3
+    code-copy: true
+    smooth-scroll: true

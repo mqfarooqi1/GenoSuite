@@ -1,0 +1,49 @@
+---
+title: "Download"
+toc: false
+---
+
+## Windows installer
+
+GenoSuite ships as a **self-contained Windows installer** — it bundles
+everything it needs, so no separate R installation is required.
+
+[Download GenoSuite-Setup.exe](https://github.com/mqfarooqi1/GenoSuite/releases/latest){.btn-genosuite}
+
+The latest installer is published on the
+**[GitHub Releases](https://github.com/mqfarooqi1/GenoSuite/releases)** page.
+
+::: callout-note
+The installer is large (~200–300 MB) because it includes a private copy of R
+and all required packages. This is what makes it self-contained: install once,
+run offline.
+:::
+
+### Installing
+
+1. Download `GenoSuite-Setup.exe`.
+2. Double-click it and follow the prompts (you may see a Windows SmartScreen
+   notice for a new publisher — choose **More info → Run anyway**).
+3. Launch **GenoSuite** from the Start menu.
+
+### System requirements
+
+- Windows 10 or 11 (64-bit)
+- A modern web browser (Edge, Chrome, or Firefox) for the interface
+- ~700 MB free disk space after installation
+
+## Run from source
+
+Developers and macOS/Linux users can run GenoSuite from source with R:
+
+```r
+install.packages(c("shiny", "bslib", "DT", "ggplot2", "ape", "vegan",
+                   "glmnet", "ranger", "xgboost"))
+install.packages("GSbench", repos = "https://mqfarooqi1.r-universe.dev")
+
+# from the cloned repository
+shiny::runApp("app")
+```
+
+The full source is on
+**[GitHub](https://github.com/mqfarooqi1/GenoSuite)** under the MIT License.

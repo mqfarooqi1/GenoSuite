@@ -1,0 +1,84 @@
+---
+title: ""
+toc: false
+---
+
+::: hero
+![](images/logo.svg)
+
+# GenoSuite
+
+::: lead
+Modern numerical-genomics analytics — a desktop application for multivariate
+analysis of genetic marker data, in the spirit of NTSYSpc but rebuilt for the
+genomic era.
+:::
+
+[Download](download.qmd){.btn-genosuite}
+[User Manual](manual.qmd){.btn-genosuite}
+[Source on GitHub](https://github.com/mqfarooqi1/GenoSuite){.btn-genosuite}
+:::
+
+## What it does
+
+GenoSuite turns SNP / marker tables into publication-ready multivariate
+analyses through a point-and-click interface — no coding required. It runs as a
+self-contained Windows application: install one file and launch a graphical
+workspace.
+
+::: feature-grid
+::: card
+### Distance & clustering
+Genetic distance matrices (Euclidean, Manhattan, correlation, Jaccard, Gower)
+and dendrograms by UPGMA, Ward, and neighbour-joining.
+:::
+::: card
+### Ordination
+Interactive PCA and PCoA with scree plots, coloured by population.
+:::
+::: card
+### Diversity & structure
+Per-marker MAF, heterozygosity, PIC, and population differentiation (Nei's Fst).
+:::
+::: card
+### GWAS
+Single-marker association with PC structure correction; Manhattan and QQ plots.
+:::
+::: card
+### Genomic prediction
+Cross-validated GBLUP and machine-learning models (elastic net, random forest,
+gradient boosting, stacked ensemble) with genomic breeding values.
+:::
+::: card
+### Mantel test
+Permutation-based correlation between two distance matrices.
+:::
+:::
+
+## A look inside
+
+::: {layout-ncol=2}
+![Population structure (PCA)](images/pca.png)
+
+![Neighbour-joining tree](images/tree.png)
+
+![GWAS Manhattan plot](images/manhattan.png)
+
+![Genomic prediction accuracy](images/prediction.png)
+:::
+
+## Quick start
+
+1. **[Download](download.qmd)** and install GenoSuite (or run it from source).
+2. Launch it — a workspace opens in your browser.
+3. On the **Data** tab, click **Load demo SNP dataset** (or upload your own CSV).
+4. Explore the **Distance**, **Clustering**, **Ordination**, **Diversity**,
+   **GWAS**, and **Prediction** tabs.
+
+See the **[User Manual](manual.qmd)** for full details on every module and the
+expected data format.
+
+---
+
+GenoSuite is free, open-source software released under the
+[MIT License](license.qmd). © 2026 Muhammad Farooqi.
