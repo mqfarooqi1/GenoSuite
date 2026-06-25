@@ -62,6 +62,46 @@ standalone desktop window.
 programmes where an accessible, reproducible, and self-contained tool is more
 practical than a scripted workflow.
 
+# State of the field
+
+Graphical tools for marker-data analysis include the proprietary `NTSYS-pc`
+[@rohlf2000] for distance-based clustering and ordination, spreadsheet add-ins
+such as GenAlEx for diversity statistics, and the free Java application TASSEL
+for association and diversity analyses. Many contemporary methods—genomic
+relationship matrices and genomic prediction in particular—are otherwise
+available mainly as R or command-line packages that require programming.
+`GenoSuite` complements these tools by bringing classical numerical-taxonomy
+workflows together with modern quantitative-genomics methods in one free,
+self-contained desktop application that needs no programming environment.
+
+# Software design
+
+`GenoSuite` is implemented in R with the `Shiny` framework [@shiny] and a
+`bslib` interface. Each analysis is an independent module operating on a shared
+data model (individuals × markers, with optional grouping and phenotype
+columns). Numerical routines build on base R, `ape` [@paradis2019], `vegan`
+[@oksanen2022], and the companion package `GSbench`. The application is
+distributed as a relocatable bundle—a private copy of R [@rcore], all required
+packages, the app, and a launcher—compiled into a single Windows installer, so
+end users run it without a separate R installation.
+
+# Research impact statement
+
+By lowering the technical barrier to standard genomic analyses, `GenoSuite` is
+intended to support teaching and applied plant- and animal-breeding and
+conservation programmes, where reproducible analyses are needed but programming
+expertise or licences for proprietary software may be unavailable.
+
+# AI usage disclosure
+
+The author developed `GenoSuite` and prepared this manuscript with substantial
+assistance from an AI coding assistant (Anthropic's Claude). The assistant
+helped write the application and packaging code, the documentation, and an
+initial draft of this paper. All methods are established techniques from the
+population-genetics and genomic-prediction literature; the author specified the
+requirements, reviewed and tested the implementation, and takes full
+responsibility for the software and its results.
+
 # Acknowledgements
 
 We acknowledge the R community and the maintainers of the open-source packages
