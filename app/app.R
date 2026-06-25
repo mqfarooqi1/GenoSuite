@@ -292,7 +292,8 @@ ui <- page_navbar(
 
   nav_spacer(),
   nav_item(tags$a("About", href = "#", onclick = "return false;",
-                  title = "GenoSuite — modern numerical-genomics analytics"))
+                  title = "GenoSuite — modern numerical-genomics analytics")),
+  nav_item(actionLink("quit_app", "Quit", icon = icon("power-off")))
 )
 
 # ---- Server ---------------------------------------------------------------
@@ -300,6 +301,13 @@ ui <- page_navbar(
 server <- function(input, output, session) {
 
   rv <- reactiveValues(data = NULL)
+
+  # desktop: quit the app (stops the local server)
+  observeEvent(input$quit_app, {
+    showNotification("GenoSuite is shutting down. You can close this tab.",
+                     duration = NULL, type = "warning")
+    shiny::stopApp()
+  })
 
   observeEvent(input$demo, {
     rv$data <- simulate_demo()
