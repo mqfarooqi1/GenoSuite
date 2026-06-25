@@ -15,8 +15,9 @@ R-portable/
 inspect_gsbench.R
 test_predict.R
 
-# paper preview artifacts
+# paper preview / build artifacts
 paper/paper-preview.*
+paper/paper.pdf
 
 # OS
 Thumbs.db
