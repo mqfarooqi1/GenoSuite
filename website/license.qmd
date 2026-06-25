@@ -60,7 +60,9 @@ GenoSuite source code itself is offered under the MIT License above.
 If GenoSuite contributes to a publication, please cite it as:
 
 > Farooqi, M. (2026). *GenoSuite: modern numerical-genomics analytics.*
-> Software. https://github.com/mqfarooqi1/GenoSuite
+> Zenodo. https://doi.org/10.5281/zenodo.20845646
+
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20845646.svg)](https://doi.org/10.5281/zenodo.20845646)
 
 ## Disclaimer
 

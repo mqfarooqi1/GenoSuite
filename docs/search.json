@@ -123,7 +123,7 @@
     "href": "license.html#how-to-cite",
     "title": "License & Copyright",
     "section": "How to cite",
-    "text": "How to cite\nIf GenoSuite contributes to a publication, please cite it as:\n\nFarooqi, M. (2026). GenoSuite: modern numerical-genomics analytics. Software. https://github.com/mqfarooqi1/GenoSuite"
+    "text": "How to cite\nIf GenoSuite contributes to a publication, please cite it as:\n\nFarooqi, M. (2026). GenoSuite: modern numerical-genomics analytics. Zenodo. https://doi.org/10.5281/zenodo.20845646\n\n\n\n\nDOI"
   },
   {
     "objectID": "license.html#disclaimer",

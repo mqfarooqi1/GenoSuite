@@ -11,6 +11,7 @@
   <a href="https://github.com/mqfarooqi1/GenoSuite/releases"><img src="https://img.shields.io/github/downloads/mqfarooqi1/GenoSuite/total" alt="Downloads"></a>
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT"></a>
   <a href="https://mqfarooqi1.github.io/GenoSuite/"><img src="https://img.shields.io/badge/docs-website-1f7a3d" alt="Website"></a>
+  <a href="https://doi.org/10.5281/zenodo.20845646"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.20845646.svg" alt="DOI"></a>
 </p>
 
 GenoSuite is a point-and-click desktop tool for multivariate analysis of genetic
@@ -64,7 +65,7 @@ shiny::runApp("app")
 If GenoSuite contributes to your work, please cite it (see
 [`CITATION.cff`](CITATION.cff) or the **Cite this repository** button above):
 
-> Farooqi, M. (2026). *GenoSuite: modern numerical-genomics analytics.* https://github.com/mqfarooqi1/GenoSuite
+> Farooqi, M. (2026). *GenoSuite: modern numerical-genomics analytics.* Zenodo. https://doi.org/10.5281/zenodo.20845646
 
 ## License
 
