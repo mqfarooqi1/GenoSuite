@@ -91,6 +91,21 @@ free graphical application, and by shipping as a self-contained installer that
 bundles its own R runtime so it can be installed and run without any programming
 environment.
 
+# Software design
+
+`GenoSuite` is organised as a set of independent analysis modules that share a
+common data model—a table of individuals (rows) by markers (columns), with
+optional grouping and phenotype columns. Each module reads this shared input and
+produces interactive figures and exportable results. Numerical routines build on
+base R, `ape` [@paradis2019], `vegan` [@oksanen2022], and the companion package
+`GSbench` for genomic prediction, while the graphical interface is built with
+`Shiny` [@shiny] and `bslib`. For distribution, the application is assembled into
+a relocatable bundle—a private copy of R [@rcore], all required packages, the
+application, and a launcher—and compiled into a single Windows installer, so it
+runs as a standalone desktop application without a separate R installation. The
+codebase includes an automated test suite covering the analysis and prediction
+functions.
+
 # Research impact statement
 
 By lowering the technical barrier to standard genomic analyses, `GenoSuite` is
