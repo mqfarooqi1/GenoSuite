@@ -118,14 +118,14 @@ decisions without switching tools.
 
 # AI usage disclosure
 
-The software and an initial draft of this paper were produced with extensive use
-of an AI coding assistant (Anthropic's Claude), which generated much of the
-implementation under my direction. I specified the scope and statistical
-methods, reviewed and tested the code, and validated numerical results against
-established packages (for example, the GBLUP solver against `rrBLUP`). All
-methods are standard, published techniques in quantitative genetics, and I take
-full responsibility for the correctness and content of the software and this
-paper.
+Anthropic's Claude (Claude Opus 4.x, via the Claude Code assistant) was used to
+assist with the following: implementing the application and packaging code,
+drafting the documentation and user manual, and drafting an initial version of
+this paper. I defined the scope and selected the statistical methods, directed
+the development, and reviewed, edited, tested, and validated all AI-assisted
+output—for example, checking the GBLUP solver against the `rrBLUP` package. All
+implemented methods are standard, published techniques in quantitative genetics.
+I made all final design decisions and accept full responsibility for the work.
 
 # Acknowledgements
 
