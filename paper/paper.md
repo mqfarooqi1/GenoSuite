@@ -14,97 +14,107 @@ authors:
 affiliations:
   - name: Independent Researcher
     index: 1
-date: 25 June 2026
+date: 26 June 2026
 bibliography: paper.bib
 ---
 
 # Summary
 
-`GenoSuite` is a free, open-source desktop application for the multivariate
-analysis of genetic marker data. It provides, through a single point-and-click
-graphical interface, the analyses that researchers and plant/animal breeders
-routinely apply to SNP and other marker datasets: genetic distance and
-similarity matrices, hierarchical clustering and neighbour-joining dendrograms,
-ordination (principal component analysis and principal coordinates analysis),
-the Mantel matrix-correlation test, diversity statistics and population
-differentiation (minor-allele frequency, heterozygosity, polymorphism
-information content, and Nei's $F_{ST}$), the genomic relationship matrix,
-linkage disequilibrium, genome-wide association scans, and cross-validated
-genomic prediction. The application is distributed as a self-contained Windows
-installer that bundles a private copy of R [@rcore] and all required packages,
-so end users need not install R or write any code.
+`GenoSuite` is a free and open-source desktop application for the multivariate
+and population-genetic analysis of genetic marker data. Through a single
+point-and-click interface it computes genetic distance and similarity matrices,
+hierarchical clustering and neighbour-joining trees, ordination by principal
+component analysis (PCA) and principal coordinates analysis (PCoA), the Mantel
+matrix-correlation test, diversity and population-differentiation statistics
+(minor-allele frequency, heterozygosity, polymorphism information content, and
+Nei's $F_{ST}$), the genomic relationship matrix, linkage disequilibrium,
+genome-wide association scans, and cross-validated genomic prediction.
+`GenoSuite` is implemented in R [@rcore] with the `Shiny` framework [@shiny] and
+is distributed as a self-contained Windows installer that bundles R and all
+dependencies, so end users run it without installing R or writing code. It is
+aimed at students, breeders, and biologists who need reproducible analyses of
+single-nucleotide polymorphism (SNP) and other marker data.
 
 # Statement of need
 
-Multivariate and population-genetic analysis of marker data has long been
-performed in graphical tools such as `NTSYS-pc` [@rohlf2000], which remains
-popular for distance-based clustering and ordination but is proprietary, no
-longer actively developed, and predates the genomic era: it offers no
-facilities for genome-wide association, genomic relationship matrices, or
-genomic prediction. Conversely, the modern methods for these tasks are
-implemented as R or command-line packages that require programming skills,
-placing them out of reach for many experimentalists and breeders.
+Analysis of marker data typically proceeds through a standard sequence of
+multivariate and population-genetic steps. The classical workflow—distance
+matrices, clustering, ordination, and matrix comparison—has long been served by
+graphical tools, while contemporary quantitative-genomics methods such as the
+genomic relationship matrix, genome-wide association studies (GWAS), and genomic
+prediction are available chiefly as R or command-line packages that require
+programming. Many experimentalists and breeders therefore cannot easily apply
+modern methods, or must combine several disparate tools.
 
-`GenoSuite` addresses this gap by combining classical numerical-taxonomy
-workflows with present-day quantitative-genomics methods in one free graphical
-application that requires no coding or installation of a programming
-environment. Genetic distances, clustering, and ordination are computed with
-base R, `ape` [@paradis2019], and `vegan` [@oksanen2022]; the genomic
-relationship matrix follows @vanraden2008; and cross-validated genomic
-prediction—GBLUP together with penalised regression, random forests, gradient
-boosting, and a stacked ensemble—is provided through the companion package
-`GSbench`, building on the mixed-model approach of @endelman2011 and the
-genomic-selection framework of @meuwissen2001. The interface is built with
-`Shiny` [@shiny] and packaged as a relocatable bundle so it launches as a
-standalone desktop window.
+`GenoSuite` brings both the classical and the contemporary methods into one
+graphical workflow that requires no programming or proprietary software:
 
-`GenoSuite` is intended for teaching, exploratory analysis, and applied breeding
-programmes where an accessible, reproducible, and self-contained tool is more
-practical than a scripted workflow.
+- **Distance and clustering.** Euclidean, Manhattan, correlation-based,
+  Jaccard, and Gower distances; hierarchical clustering by UPGMA, Ward,
+  complete, and single linkage; and neighbour-joining trees with export to
+  Newick format [@paradis2019].
+- **Ordination and matrix comparison.** Principal component analysis on the
+  markers and principal coordinates analysis on the distance matrix, each with
+  scree plots, and the Mantel test between two distance matrices [@oksanen2022].
+- **Diversity and population structure.** Per-marker minor-allele frequency,
+  observed and expected heterozygosity, polymorphism information content, and
+  population differentiation by Nei's $F_{ST}$ [@nei1973].
+- **Kinship and linkage.** The genomic relationship matrix following
+  @vanraden2008, and pairwise linkage disequilibrium ($r^2$) with a decay plot.
+- **Association and prediction.** Single-marker GWAS with principal-component
+  correction for population structure, and cross-validated genomic
+  prediction—genomic best linear unbiased prediction [@endelman2011;
+  @meuwissen2001] together with penalised regression, random forests, gradient
+  boosting, and a stacked ensemble—reporting predictive ability and genomic
+  estimated breeding values.
+
+Analyses accept comma-separated or Excel marker tables and produce interactive
+figures and exportable results (distance matrices, trees, statistics, and
+breeding values).
 
 # State of the field
 
-Graphical tools for marker-data analysis include the proprietary `NTSYS-pc`
-[@rohlf2000] for distance-based clustering and ordination, spreadsheet add-ins
-such as GenAlEx for diversity statistics, and the free Java application TASSEL
-for association and diversity analyses. Many contemporary methods—genomic
-relationship matrices and genomic prediction in particular—are otherwise
-available mainly as R or command-line packages that require programming.
-`GenoSuite` complements these tools by bringing classical numerical-taxonomy
-workflows together with modern quantitative-genomics methods in one free,
-self-contained desktop application that needs no programming environment.
+Graphical, install-and-run tools for marker-data analysis are dominated by the
+proprietary `NTSYS-pc` [@rohlf2000], which remains widely used for distance-based
+clustering and ordination but is closed-source, no longer actively developed, and
+predates the genomic era—it offers no genomic relationship matrix, GWAS, or
+genomic prediction. The spreadsheet add-in GenAlEx [@peakall2012] provides
+population-genetic summaries within Microsoft Excel, and the free Java
+application TASSEL [@bradbury2007] performs association and diversity analyses but
+focuses on association mapping and does not cover numerical-taxonomy workflows or
+genomic prediction. Contemporary prediction and mixed-model methods are otherwise
+available mainly as R or command-line packages aimed at programmers.
 
-# Software design
-
-`GenoSuite` is implemented in R with the `Shiny` framework [@shiny] and a
-`bslib` interface. Each analysis is an independent module operating on a shared
-data model (individuals × markers, with optional grouping and phenotype
-columns). Numerical routines build on base R, `ape` [@paradis2019], `vegan`
-[@oksanen2022], and the companion package `GSbench`. The application is
-distributed as a relocatable bundle—a private copy of R [@rcore], all required
-packages, the app, and a launcher—compiled into a single Windows installer, so
-end users run it without a separate R installation.
+`GenoSuite` complements these tools by consolidating classical
+numerical-taxonomy workflows and modern quantitative-genomics methods in a single
+free graphical application, and by shipping as a self-contained installer that
+bundles its own R runtime so it can be installed and run without any programming
+environment.
 
 # Research impact statement
 
 By lowering the technical barrier to standard genomic analyses, `GenoSuite` is
 intended to support teaching and applied plant- and animal-breeding and
 conservation programmes, where reproducible analyses are needed but programming
-expertise or licences for proprietary software may be unavailable.
+expertise or licences for proprietary software may be unavailable. Bringing
+distance and diversity analysis together with GWAS and genomic prediction in one
+reproducible interface allows users to move from raw marker tables to selection
+decisions without switching tools.
 
 # AI usage disclosure
 
-The author developed `GenoSuite` and prepared this manuscript with substantial
-assistance from an AI coding assistant (Anthropic's Claude). The assistant
-helped write the application and packaging code, the documentation, and an
-initial draft of this paper. All methods are established techniques from the
-population-genetics and genomic-prediction literature; the author specified the
-requirements, reviewed and tested the implementation, and takes full
-responsibility for the software and its results.
+The software and an initial draft of this paper were produced with extensive use
+of an AI coding assistant (Anthropic's Claude), which generated much of the
+implementation under my direction. I specified the scope and statistical
+methods, reviewed and tested the code, and validated numerical results against
+established packages (for example, the GBLUP solver against `rrBLUP`). All
+methods are standard, published techniques in quantitative genetics, and I take
+full responsibility for the correctness and content of the software and this
+paper.
 
 # Acknowledgements
 
-We acknowledge the R community and the maintainers of the open-source packages
-on which `GenoSuite` depends.
+I acknowledge the R community and the maintainers of the open-source packages on
+which `GenoSuite` depends.
 
 # References
