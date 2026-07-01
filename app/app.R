@@ -62,6 +62,57 @@ numeric_matrix <- function(df, id_col, group_col, pheno_col = "") {
   as.matrix(M)
 }
 
+## Parse a HapMap genotype file (markers x samples) into an individuals x
+## markers 0/1/2 dosage data frame (dosage = copies of the second listed
+## allele). The first 11 columns are HapMap metadata; column 1 = marker id,
+## column 2 = alleles "A/B"; the rest are sample genotype calls (e.g. "AA").
+read_hapmap_geno <- function(path, ext) {
+  hm <- if (ext %in% c("xlsx", "xls"))
+          as.data.frame(readxl::read_excel(path), check.names = FALSE)
+        else
+          utils::read.delim(path, check.names = FALSE, stringsAsFactors = FALSE)
+  meta_n  <- 11
+  rs      <- as.character(hm[[1]])
+  alleles <- toupper(as.character(hm[[2]]))
+  a1 <- substr(alleles, 1, 1)
+  a2 <- substr(sub(".*/", "", alleles), 1, 1)
+  samp_cols <- (meta_n + 1):ncol(hm)
+  samples   <- names(hm)[samp_cols]
+  calls     <- toupper(as.matrix(hm[, samp_cols, drop = FALSE]))
+  bases <- c("A", "C", "G", "T")
+  dose  <- matrix(NA_real_, length(samples), nrow(calls),
+                  dimnames = list(samples, rs))
+  for (j in seq_len(nrow(calls))) {
+    g  <- calls[j, ]
+    c1 <- substr(g, 1, 1); c2 <- substr(g, 2, 2)
+    ok <- c1 %in% bases & c2 %in% bases &
+          (c1 == a1[j] | c1 == a2[j]) & (c2 == a1[j] | c2 == a2[j])
+    d  <- (c1 == a2[j]) + (c2 == a2[j])
+    d[!ok] <- NA_real_
+    dose[, j] <- d
+  }
+  data.frame(ID = samples, dose, check.names = FALSE, stringsAsFactors = FALSE)
+}
+
+## Read an optional phenotype file (first column = ID).
+read_pheno_file <- function(info) {
+  if (is.null(info)) return(NULL)
+  ext <- tolower(tools::file_ext(info$name))
+  if (ext %in% c("xlsx", "xls"))
+    as.data.frame(readxl::read_excel(info$datapath), check.names = FALSE)
+  else
+    utils::read.csv(info$datapath, check.names = FALSE, stringsAsFactors = FALSE)
+}
+
+## Merge a converted genotype data frame with an optional phenotype table by ID.
+merge_uploads <- function(geno_df, pheno_df) {
+  geno_df$ID <- as.character(geno_df$ID)
+  if (is.null(pheno_df)) return(geno_df)
+  names(pheno_df)[1] <- "ID"
+  pheno_df$ID <- as.character(pheno_df$ID)
+  merge(pheno_df, geno_df, by = "ID")
+}
+
 # ---- analysis helpers -----------------------------------------------------
 
 DIST_CHOICES <- c(
@@ -148,16 +199,26 @@ ui <- page_navbar(
     layout_sidebar(
       sidebar = sidebar(
         width = 330,
-        fileInput("file", "Upload data (CSV or Excel)",
-                  accept = c(".csv", ".txt", ".xlsx", ".xls")),
+        radioButtons("data_mode", "Genotype format",
+                     c("Table (individuals x markers)" = "table",
+                       "HapMap (markers x samples)" = "hapmap")),
+        fileInput("file", "Upload genotypes (CSV / Excel / HapMap)",
+                  accept = c(".csv", ".txt", ".xlsx", ".xls", ".hmp")),
+        conditionalPanel(
+          "input.data_mode == 'hapmap'",
+          fileInput("pheno_file",
+                    "Phenotype file (optional; CSV/Excel, 1st column = ID)",
+                    accept = c(".csv", ".xlsx", ".xls"))),
         checkboxInput("header", "First row is header", TRUE),
         actionButton("demo", "Load demo SNP dataset", class = "btn-primary w-100"),
         hr(),
         selectInput("id_col", "ID column", choices = NULL),
         selectInput("group_col", "Grouping column (optional)", choices = NULL),
         selectInput("pheno_col", "Phenotype column (GWAS / prediction)", choices = NULL),
-        helpText("Rows = individuals. Remaining numeric columns are markers",
-                 "(allele dosage 0/1/2).")
+        helpText("Table mode: rows = individuals, numeric columns = markers",
+                 "(dosage 0/1/2). HapMap mode converts a markers x samples file",
+                 "to individuals x markers and merges an optional phenotype file",
+                 "by ID.")
       ),
       card(card_header("Data preview"),
            textOutput("data_summary"), DTOutput("preview"))
@@ -357,20 +418,38 @@ server <- function(input, output, session) {
 
   observeEvent(input$file, {
     ext <- tolower(tools::file_ext(input$file$name))
-    df <- tryCatch(
-      if (ext %in% c("xlsx", "xls")) {
-        as.data.frame(readxl::read_excel(input$file$datapath,
-                                         col_names = input$header),
-                      check.names = FALSE, stringsAsFactors = FALSE)
-      } else {
-        utils::read.csv(input$file$datapath, header = input$header,
+    if (identical(input$data_mode, "hapmap")) {
+      g <- tryCatch(
+        withProgress(message = "Converting HapMap genotypes...",
+                     read_hapmap_geno(input$file$datapath, ext)),
+        error = function(e) {
+          showNotification(paste("HapMap read failed:", conditionMessage(e)),
+                           type = "error"); NULL })
+      if (is.null(g)) return()
+      rv$geno_hapmap <- g
+      showNotification(sprintf("Converted HapMap: %d individuals x %d markers.",
+                               nrow(g), ncol(g) - 1L), type = "message")
+      rv$data <- merge_uploads(g, read_pheno_file(input$pheno_file))
+    } else {
+      df <- tryCatch(
+        if (ext %in% c("xlsx", "xls")) {
+          as.data.frame(readxl::read_excel(input$file$datapath,
+                                           col_names = input$header),
                         check.names = FALSE, stringsAsFactors = FALSE)
-      },
-      error = function(e) {
-        showNotification(paste("Could not read file:", conditionMessage(e)), type = "error")
-        NULL
-      })
-    if (!is.null(df)) rv$data <- df
+        } else {
+          utils::read.csv(input$file$datapath, header = input$header,
+                          check.names = FALSE, stringsAsFactors = FALSE)
+        },
+        error = function(e) {
+          showNotification(paste("Could not read file:", conditionMessage(e)),
+                           type = "error"); NULL })
+      if (!is.null(df)) rv$data <- df
+    }
+  })
+
+  observeEvent(input$pheno_file, {
+    if (identical(input$data_mode, "hapmap") && !is.null(rv$geno_hapmap))
+      rv$data <- merge_uploads(rv$geno_hapmap, read_pheno_file(input$pheno_file))
   })
 
   observeEvent(rv$data, {
