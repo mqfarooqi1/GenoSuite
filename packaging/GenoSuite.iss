@@ -2,7 +2,7 @@
 ; Compile from the packaging/ directory:  ISCC.exe GenoSuite.iss
 
 #define MyAppName "GenoSuite"
-#define MyAppVersion "0.1.1"
+#define MyAppVersion "0.1.2"
 #define MyAppPublisher "Muhammad Farooqi"
 #define MyAppURL "https://mqfarooqi1.github.io/GenoSuite/"
 #define DistDir "..\dist\GenoSuite"

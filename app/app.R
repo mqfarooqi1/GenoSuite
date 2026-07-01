@@ -802,7 +802,7 @@ server <- function(input, output, session) {
   observeEvent(input$about_app, {
     showModal(modalDialog(
       title = "About GenoSuite", easyClose = TRUE, footer = modalButton("Close"),
-      tags$p(tags$strong("GenoSuite 0.1.1"),
+      tags$p(tags$strong("GenoSuite 0.1.2"),
              " — modern numerical-genomics analytics."),
       tags$p("© 2026 Muhammad Farooqi. Released under the MIT License."),
       tags$p(tags$a(href = "https://mqfarooqi1.github.io/GenoSuite/", target = "_blank",
